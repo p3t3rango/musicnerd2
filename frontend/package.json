@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@types/uuid": "^9.0.1",
-    "next": "^13.4.4",
+    "next": "^15.1.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "uuid": "^9.0.0"
