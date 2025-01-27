@@ -1,0 +1,10 @@
+fastapi==0.68.0
+uvicorn==0.15.0
+sqlalchemy==1.4.23
+psycopg2-binary==2.8.6
+langchain==0.0.184
+langchain-openai==0.0.2
+langchain-community==0.0.10
+beautifulsoup4==4.9.3
+requests==2.26.0
+python-dotenv==0.19.0 
