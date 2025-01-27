@@ -1,21 +1,16 @@
 {
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "api/main.py",
-      "use": "@vercel/python",
-      "config": {
-        "maxLambdaSize": "15mb",
-        "pythonVersion": "3.9"
-      }
+      "source": "/api/(.*)",
+      "destination": "/api/main.py"
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/main.py"
+  "functions": {
+    "api/main.py": {
+      "memory": 1024,
+      "maxDuration": 10
     }
-  ],
+  },
   "env": {
     "PYTHONPATH": ".",
     "DATABASE_URL": "sqlite+aiosqlite:///./data.db"
