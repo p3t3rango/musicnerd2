@@ -3,16 +3,13 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import os
 
-# Use environment variable for database URL in production
-DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite:///./data/music_chat.db')
+DATABASE_URL = os.getenv('DATABASE_URL')
 
-# SQLite for local development, PostgreSQL for production
-if DATABASE_URL.startswith("sqlite"):
-    DB_DIR = os.path.join(os.getcwd(), 'data')
-    os.makedirs(DB_DIR, exist_ok=True)
-    DB_PATH = os.path.join(DB_DIR, 'music_chat.db')
-    DATABASE_URL = f"sqlite:///{DB_PATH}"
+# Handle special Postgres URL format from Supabase
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
+engine = create_engine(DATABASE_URL)
 Base = declarative_base()
 
 class Artist(Base):
@@ -41,4 +38,11 @@ class PlatformLink(Base):
     artist_id = Column(Integer, ForeignKey('artists.id'))
     platform = Column(String)
     url = Column(String)
-    artist = relationship("Artist", back_populates="platform_links") 
+    artist = relationship("Artist", back_populates="platform_links")
+
+# Create tables
+def init_db():
+    Base.metadata.create_all(engine)
+
+if __name__ == "__main__":
+    init_db() 

@@ -1,10 +1,14 @@
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, WebSocket, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from src.agent.chat_agent import AnnieMacAgent
+from src.models.database import init_db, Base, engine
 import json
 import asyncio
+
+# Initialize database tables on startup
+Base.metadata.create_all(engine)
 
 app = FastAPI()
 
@@ -19,6 +23,15 @@ app.add_middleware(
 
 # Store chat agents for different sessions
 chat_agents = {}
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup"""
+    try:
+        init_db()
+        print("Database initialized successfully!")
+    except Exception as e:
+        print(f"Error initializing database: {str(e)}")
 
 class Message(BaseModel):
     role: str
@@ -38,11 +51,15 @@ async def root():
 
 @app.get("/artists")
 async def get_artists():
-    agent = AnnieMacAgent()
-    with agent.engine.connect() as conn:
-        result = conn.execute("SELECT name FROM artists")
-        artists = [row[0] for row in result]
-    return {"artists": artists}
+    try:
+        agent = AnnieMacAgent()
+        with agent.engine.connect() as conn:
+            result = conn.execute("SELECT name FROM artists")
+            artists = [row[0] for row in result]
+        return {"artists": artists}
+    except Exception as e:
+        print(f"Database error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Database error")
 
 @app.websocket("/chat/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id: str):
