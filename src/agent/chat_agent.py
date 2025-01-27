@@ -5,9 +5,9 @@ from langchain.memory import ConversationBufferMemory
 from langchain.chains import LLMChain
 from langchain_openai import ChatOpenAI
 from typing import List, Dict
-from sqlalchemy.orm import Session
-from sqlalchemy import create_engine
-from src.models.database import Artist, SocialMedia, PlatformLink, DATABASE_URL
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import sessionmaker
+from src.models.database import Artist, SocialMedia, PlatformLink, DATABASE_URL, engine
 from src.services.music_api import MusicNerdAPI
 import os
 import re
@@ -21,8 +21,10 @@ class AnnieMacAgent:
             openai_api_key=os.getenv('OPENAI_API_KEY')
         )
         
-        # Initialize database connection
-        self.engine = create_engine(DATABASE_URL)
+        # Create async session maker
+        self.async_session = sessionmaker(
+            engine, class_=AsyncSession, expire_on_commit=False
+        )
         
         self.memory = ConversationBufferMemory(
             memory_key="chat_history",
@@ -75,7 +77,7 @@ class AnnieMacAgent:
         Enhanced artist name extraction with better handling of multi-word artist names
         """
         try:
-            with Session(self.engine) as session:
+            async with self.async_session() as session:
                 known_artists = [artist.name.lower() for artist in session.query(Artist).all()]
             
             # Look for exact matches of known artists (case insensitive)
@@ -84,25 +86,23 @@ class AnnieMacAgent:
             for artist in known_artists:
                 if artist in text_lower:
                     # Get the original artist name with correct capitalization
-                    artist_obj = session.query(Artist).filter(Artist.name.ilike(artist)).first()
-                    found_artists.append(artist_obj.name)
+                    async with self.async_session() as session:
+                        artist_obj = await session.get(Artist, artist)
+                        if artist_obj:
+                            found_artists.append(artist_obj.name)
             
             return found_artists
         except Exception as e:
             print(f"Warning: Could not query artists: {str(e)}")
             return []
     
-    def get_artist_info(self, artist_name: str) -> Dict:
-        """Query both API and database for artist information"""
-        # Try API first
-        api_info = self.music_api.get_artist_info(artist_name)
-        if api_info:
-            return api_info
-            
-        # Fall back to database
-        with Session(self.engine) as session:
-            artist = session.query(Artist).filter(Artist.name.ilike(f"%{artist_name}%")).first()
-            
+    async def get_artist_info(self, artist_name: str) -> Dict:
+        async with self.async_session() as session:
+            result = await session.execute(
+                "SELECT * FROM artists WHERE name ILIKE :name",
+                {"name": f"%{artist_name}%"}
+            )
+            artist = result.first()
             if not artist:
                 return {}
             
@@ -124,7 +124,7 @@ class AnnieMacAgent:
             if mentioned_artists:
                 artist_info = {}
                 for artist in mentioned_artists:
-                    info = self.get_artist_info(artist)
+                    info = await self.get_artist_info(artist)
                     print(f"Info for {artist}: {info}")  # Debug print
                     if info:
                         artist_info[artist] = info

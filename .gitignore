@@ -10,6 +10,8 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+setup.py
+tests/
 
 # Node
 node_modules/
@@ -42,3 +44,8 @@ data/
 *.dylib
 *.so
 *.node 
+.vercel
+
+# Add to existing .gitignore
+data/*.db
+!data/.gitkeep

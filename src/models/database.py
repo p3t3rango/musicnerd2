@@ -1,15 +1,19 @@
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, Table
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import declarative_base
+from sqlalchemy import Column, Integer, String, ForeignKey
 from sqlalchemy.orm import relationship
 import os
 
-DATABASE_URL = os.getenv('DATABASE_URL')
+# Use SQLite for simplicity
+DATABASE_URL = os.getenv('DATABASE_URL', 'sqlite+aiosqlite:///./data.db')
 
-# Handle special Postgres URL format from Supabase
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# Create async engine
+engine = create_async_engine(
+    DATABASE_URL,
+    echo=True,
+    future=True
+)
 
-engine = create_engine(DATABASE_URL)
 Base = declarative_base()
 
 class Artist(Base):
@@ -40,9 +44,10 @@ class PlatformLink(Base):
     url = Column(String)
     artist = relationship("Artist", back_populates="platform_links")
 
-# Create tables
-def init_db():
-    Base.metadata.create_all(engine)
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
 if __name__ == "__main__":
-    init_db() 
+    import asyncio
+    asyncio.run(init_db()) 

@@ -4,19 +4,23 @@ from pydantic import BaseModel
 from typing import List, Optional
 import sys
 import os
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import sessionmaker
 
 # Add src to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.agent.chat_agent import AnnieMacAgent
-from src.models.database import init_db, Base, engine
+from src.models.database import init_db, Base, engine, Artist
 import json
 import asyncio
 
-# Initialize database tables on startup
-Base.metadata.create_all(engine)
-
 app = FastAPI()
+
+# Create async session maker
+async_session = sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
 
 # Add CORS middleware
 app.add_middleware(
@@ -34,7 +38,7 @@ chat_agents = {}
 async def startup_event():
     """Initialize database on startup"""
     try:
-        init_db()
+        await init_db()
         print("Database initialized successfully!")
     except Exception as e:
         print(f"Error initializing database: {str(e)}")
@@ -58,11 +62,10 @@ async def root():
 @app.get("/artists")
 async def get_artists():
     try:
-        agent = AnnieMacAgent()
-        with agent.engine.connect() as conn:
-            result = conn.execute("SELECT name FROM artists")
+        async with async_session() as session:
+            result = await session.execute("SELECT name FROM artists")
             artists = [row[0] for row in result]
-        return {"artists": artists}
+            return {"artists": artists}
     except Exception as e:
         print(f"Database error: {str(e)}")
         raise HTTPException(status_code=500, detail="Database error")

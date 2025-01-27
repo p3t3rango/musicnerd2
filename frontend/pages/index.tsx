@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 
+interface Message {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 export default function Home() {
-  const [input, setInput] = useState('')
-  const [messages, setMessages] = useState([])
-  const [wsReady, setWsReady] = useState(false)
-  const [artists, setArtists] = useState([])
-  const wsRef = useRef(null)
-  const clientId = useRef(uuidv4())
+  const [input, setInput] = useState<string>('')
+  const [messages, setMessages] = useState<Message[]>([])
+  const [wsReady, setWsReady] = useState<boolean>(false)
+  const [artists, setArtists] = useState<string[]>([])
+  const wsRef = useRef<WebSocket | null>(null)
+  const clientId = useRef<string>(uuidv4())
 
   useEffect(() => {
     // Fetch available artists
@@ -33,13 +38,15 @@ export default function Home() {
     wsRef.current = ws
     
     return () => {
-      ws.close()
+      if (wsRef.current) {
+        wsRef.current.close()
+      }
     }
   }, [])
 
-  const sendMessage = async (e) => {
+  const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!input.trim() || !wsReady) return
+    if (!input.trim() || !wsReady || !wsRef.current) return
 
     setMessages(prev => [...prev, {
       role: 'user',
