@@ -6,7 +6,7 @@ const nextConfig = {
       {
         source: '/api/:path*',
         destination: process.env.NODE_ENV === 'production' 
-          ? 'https://your-deployment-url.vercel.app/api/:path*'
+          ? 'https://musicnerd2.vercel.app/api/:path*'  // Replace with your actual Vercel URL
           : 'http://localhost:8000/api/:path*',
       },
     ];
