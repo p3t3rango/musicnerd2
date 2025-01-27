@@ -1,0 +1,6 @@
+{
+  "runtime": "python3.9",
+  "handler": "main.py",
+  "memory": 1024,
+  "maxDuration": 10
+} 
